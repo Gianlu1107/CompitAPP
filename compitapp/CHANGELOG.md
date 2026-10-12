@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.0.5
+
+- Più figli con lo stesso accesso: pulizia una tantum dei dati del secondo figlio (e successivi). Chi aveva già usato una versione precedente con `alunno` 2 poteva avere nel database compiti, voti e lezioni del primo figlio mescolati a quelli giusti (compiti doppi, orario sbagliato) e nessuna versione li ripuliva. Al primo avvio con questa versione i dati vengono cancellati e riletti da capo; i compiti non ancora scaduti possono arrivare di nuovo una volta su Telegram.
+
 ## 2.0.4
 
 - Più figli con lo stesso accesso: se per un figlio (alunno 2, 3…) l'app aveva già salvato dati prima di conoscere il profilo giusto, quei dati erano del primo figlio e restavano a video anche dopo aver impostato `alunno`. Al primo avvio con questa versione vengono cancellati e riletti da capo, senza notifiche.

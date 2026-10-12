@@ -78,13 +78,18 @@ def _controlla_cambio_profilo(nome, indice):
         r = conn.execute('SELECT valore FROM meta WHERE chiave=?', (f"profilo:{nome}",)).fetchone()
         precedente = r['valore'] if r else None
         attuale = str(indice or 0)
-        # Prima volta che registriamo il profilo (aggiornamento da una versione precedente): i dati
-        # già salvati sono quelli del PRIMO profilo, quindi per un alunno 2, 3... non sono suoi.
-        primo_controllo_su_altro_profilo = precedente is None and attuale not in ('0', '1')
-        if (precedente is not None and precedente != attuale) or primo_controllo_su_altro_profilo:
+        # Pulizia una tantum (2.0.5): chi ha usato versioni precedenti con un alunno 2, 3... può avere
+        # nel database compiti, voti e lezioni del PRIMO figlio mescolati a quelli giusti, e nessuna
+        # versione se ne accorgeva (il profilo risultava già "registrato" senza che i dati fossero puliti).
+        chiave_pulizia = f"pulizia_profilo:{nome}"
+        pulizia_fatta = conn.execute('SELECT 1 FROM meta WHERE chiave=?', (chiave_pulizia,)).fetchone() is not None
+        pulizia_necessaria = (not pulizia_fatta) and attuale not in ('0', '1')
+        if (precedente is not None and precedente != attuale) or pulizia_necessaria:
             svuota_studente(conn, nome)
-            print(f"[ARGO] {nome}: profilo {precedente if precedente is not None else 'precedente sconosciuto'} → {attuale}, "
+            motivo = "cambio di profilo" if (precedente is not None and precedente != attuale) else "pulizia una tantum dei dati"
+            print(f"[ARGO] {nome}: {motivo} (profilo {precedente or '?'} → {attuale}): "
                   "cancello i dati vecchi e ricarico l'anno scolastico")
+        conn.execute("INSERT OR REPLACE INTO meta (chiave, valore) VALUES (?, '1')", (chiave_pulizia,))
         conn.execute("INSERT OR REPLACE INTO meta (chiave, valore) VALUES (?, ?)", (f"profilo:{nome}", attuale))
         conn.commit()
         conn.close()
