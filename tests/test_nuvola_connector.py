@@ -75,10 +75,11 @@ class TestNuvolaConnector(unittest.TestCase):
         risultato = self.connector.fetch_compiti()
         self.assertIsInstance(risultato, dict)
         self.assertTrue(len(risultato) > 0)
-        for data_iso, items in risultato.items():
-            self.assertTrue(len(items) > 0)
-            self.assertEqual(items[0]["materia"], "Italiano")
-            self.assertEqual(items[0]["compito"], "Esercizi pagina 100")
+        for data_iso, payload in risultato.items():
+            self.assertIn("materie", payload)
+            self.assertIn("compiti", payload)
+            self.assertIn("Italiano", payload["materie"])
+            self.assertIn("Prof. Bianchi: Esercizi pagina 100", payload["compiti"])
 
     @patch.object(NuvolaConnector, "get_client")
     def test_fetch_voti(self, mock_get_client):

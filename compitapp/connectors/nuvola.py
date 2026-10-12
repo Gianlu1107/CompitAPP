@@ -11,7 +11,7 @@ from typing import Any, Dict, List, Optional
 from nuvola_api import NuvolaClient, NuvolaError
 from .base import BaseConnector
 
-_nuvola_clients: Dict[str, NuvolaClient] = {}
+_nuvola_clients: Dict[tuple, NuvolaClient] = {}
 
 
 class NuvolaConnector(BaseConnector):
@@ -20,14 +20,17 @@ class NuvolaConnector(BaseConnector):
     def get_client(self) -> Optional[NuvolaClient]:
         """Inizializza o recupera l'istanza autenticata di NuvolaClient per lo studente."""
         global _nuvola_clients
-        if self.nome not in _nuvola_clients:
+        username = str(self.studente.get("username") or "").strip()
+        cache_key = (self.nome, username)
+        if cache_key not in _nuvola_clients:
             data_dir = os.environ.get("DATA_DIR")
             if not data_dir:
                 data_dir = "/data" if os.path.isdir("/data") and os.access("/data", os.W_OK) else tempfile.gettempdir()
+            safe_user = "".join(c if c.isalnum() or c in ("-", "_") else "_" for c in username)
             safe_nome = "".join(c if c.isalnum() or c in ("-", "_") else "_" for c in self.nome)
-            session_file = os.path.join(data_dir, f"nuvola_session_{safe_nome}.json")
+            session_file = os.path.join(data_dir, f"nuvola_session_{safe_user}_{safe_nome}.json")
             client = NuvolaClient(
-                username=self.studente.get("username"),
+                username=username,
                 password=self.studente.get("password"),
                 session_file=session_file,
                 auto_save_session=True,
@@ -35,7 +38,7 @@ class NuvolaConnector(BaseConnector):
             try:
                 if not client.is_authenticated():
                     client.login()
-                _nuvola_clients[self.nome] = client
+                _nuvola_clients[cache_key] = client
                 print(f"[NUVOLA] Sessione inizializzata per {self.nome}")
             except NuvolaError as e:
                 print(f"[NUVOLA] Errore autenticazione {self.nome}: {e}")
@@ -43,10 +46,11 @@ class NuvolaConnector(BaseConnector):
             except Exception as e:
                 print(f"[NUVOLA] Errore imprevisto inizializzazione {self.nome}: {e}")
                 return None
-        return _nuvola_clients[self.nome]
+        return _nuvola_clients[cache_key]
 
     def reset_client(self) -> None:
-        _nuvola_clients.pop(self.nome, None)
+        username = str(self.studente.get("username") or "").strip()
+        _nuvola_clients.pop((self.nome, username), None)
 
     def _get_alunno_id(self) -> Optional[int]:
         """Determina l'ID numerico dell'alunno Nuvola (da config o selezionando il profilo configurato)."""
@@ -92,7 +96,7 @@ class NuvolaConnector(BaseConnector):
         if not alunno_id:
             return {}
 
-        risultato: Dict[str, List[Dict[str, Any]]] = {}
+        risultato: Dict[str, Dict[str, List[str]]] = {}
         oggi = date.today()
         for delta in range(15):
             giorno = oggi + timedelta(days=delta)
@@ -101,13 +105,18 @@ class NuvolaConnector(BaseConnector):
             try:
                 compiti_giorno = client.get_compiti(alunno_id, data_param)
                 if compiti_giorno:
-                    risultato[data_db] = [
-                        {
-                            "materia": c.materia or "Materia",
-                            "compito": c.descrizione or c.titolo or "",
-                        }
-                        for c in compiti_giorno
-                    ]
+                    materie = []
+                    compiti_testi = []
+                    for c in compiti_giorno:
+                        mat = c.materia or "Materia"
+                        desc = c.descrizione or c.titolo or ""
+                        testo = f"{c.docente}: {desc}".strip() if c.docente else desc
+                        materie.append(mat)
+                        compiti_testi.append(testo)
+                    risultato[data_db] = {
+                        "materie": materie,
+                        "compiti": compiti_testi,
+                    }
             except Exception:
                 continue
         return risultato
@@ -295,7 +304,7 @@ class NuvolaConnector(BaseConnector):
                 continue
         return registro
 
-    def fetch_orario(self) -> Dict[str, Any]:
+    def fetch_orario(self) -> List[Dict[str, Any]]:
         from orario_utils import ricostruisci_orario
         return ricostruisci_orario(self.fetch_registro())
 

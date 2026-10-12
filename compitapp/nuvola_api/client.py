@@ -16,6 +16,7 @@ from typing import Any, Dict, List, Optional, Union
 from .exceptions import (
     NuvolaAPIError,
     NuvolaAuthError,
+    NuvolaError,
     NuvolaNetworkError,
     NuvolaNotFoundError,
     NuvolaPermissionError,
@@ -85,7 +86,11 @@ class NuvolaClient:
         if self.session_file and os.path.exists(self.session_file):
             try:
                 with open(self.session_file, "r", encoding="utf-8") as f:
-                    return json.load(f)
+                    data = json.load(f)
+                    if self.username and data.get("username") and data.get("username") != self.username:
+                        logger.warning("Sessione su disco appartenente a un altro utente, invalidata: %s", self.session_file)
+                        return {}
+                    return data
             except Exception as e:
                 logger.warning("Impossibile caricare il file di sessione %s: %s", self.session_file, e)
         return {}
@@ -140,6 +145,7 @@ class NuvolaClient:
                     data = json.loads(resp.read().decode("utf-8"))
                     now = time.time()
                     self.session_data = {
+                        "username": u,
                         "token": data.get("token"),
                         "refreshToken": data.get("refreshToken"),
                         "idAnagrafica": data.get("idAnagrafica"),

@@ -53,7 +53,6 @@ def main() -> None:
     # Comando: login
     login_p = subparsers.add_parser("login", help="Effettua l'autenticazione iniziale e memorizza i token")
     login_p.add_argument("-u", "--username", help="Nome utente dell'account Nuvola")
-    login_p.add_argument("-p", "--password", help="Password dell'account Nuvola")
 
     # Comando: refresh
     subparsers.add_parser("refresh", help="Rinnova manualmente il token di accesso tramite refresh token")
@@ -94,7 +93,7 @@ def main() -> None:
         sys.exit(0)
 
     username = getattr(args, "username", None) or os.getenv("NUVOLA_USERNAME")
-    password = getattr(args, "password", None) or os.getenv("NUVOLA_PASSWORD")
+    password = os.getenv("NUVOLA_PASSWORD")
 
     client = NuvolaClient(
         username=username,
