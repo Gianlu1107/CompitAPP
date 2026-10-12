@@ -11,11 +11,15 @@ from connectors import ArgoConnector, BaseConnector, get_connector
 
 
 def get_studenti() -> List[Dict[str, Any]]:
-    """Estrae l'elenco degli studenti configurati dalla variabile di ambiente STUDENTI."""
+    """Estrae l'elenco degli studenti configurati dalla variabile di ambiente STUDENTI.
+    Per Argo richiede username e codice_scuola; per Nuvola richiede solo username."""
     raw = os.environ.get('STUDENTI', '[]')
     try:
         studenti = json.loads(raw)
-        return [s for s in studenti if s.get('codice_scuola') and s.get('username')]
+        return [
+            s for s in studenti
+            if s.get('username') and (str(s.get('registro') or 'argo').strip().lower() == 'nuvola' or s.get('codice_scuola'))
+        ]
     except Exception as e:
         print(f"[ARGO] Errore parsing STUDENTI: {e}")
         return []
@@ -61,7 +65,7 @@ def fetch_registro(studente: Dict[str, Any], giorni: int = 0) -> List[Dict[str, 
     return get_connector(studente).fetch_registro(giorni=giorni)
 
 
-def fetch_orario(studente: Dict[str, Any]) -> Dict[str, Any]:
+def fetch_orario(studente: Dict[str, Any]) -> List[Dict[str, Any]]:
     return get_connector(studente).fetch_orario()
 
 

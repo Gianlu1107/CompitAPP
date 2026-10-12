@@ -421,7 +421,7 @@ class ArgoConnector(BaseConnector):
             print(f"[ARGO] Errore lettura registro: {e}")
             return []
 
-    def fetch_orario(self) -> Dict[str, Any]:
+    def fetch_orario(self) -> List[Dict[str, Any]]:
         from orario_utils import ricostruisci_orario
         return ricostruisci_orario(self.fetch_registro())
 

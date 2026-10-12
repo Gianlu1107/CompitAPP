@@ -59,7 +59,7 @@ class BaseConnector(ABC):
         pass
 
     @abstractmethod
-    def fetch_orario(self) -> Dict[str, Any]:
+    def fetch_orario(self) -> List[Dict[str, Any]]:
         """Recupera l'orario settimanale delle lezioni."""
         pass
 
