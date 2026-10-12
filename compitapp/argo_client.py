@@ -7,7 +7,7 @@ import json
 import os
 from typing import Any, Dict, List, Optional
 
-from connectors import ArgoConnector, BaseConnector, get_connector
+from connectors import ArgoConnector, BaseConnector, NuvolaConnector, get_connector
 
 
 def get_studenti() -> List[Dict[str, Any]]:
@@ -94,4 +94,5 @@ __all__ = [
     "fetch_medie",
     "BaseConnector",
     "ArgoConnector",
+    "NuvolaConnector",
 ]
